@@ -3,6 +3,23 @@ import 'package:bakery/models/production.dart';
 import 'package:bakery/utils.dart' as utils;
 import 'package:flutter/material.dart';
 
+String? realValidator(String? value) {
+  double? num = value != null ? double.tryParse(value) : null;
+  if (num == null) {
+    return "Campo Obrigatório";
+  }
+
+  if (num < 0.0) {
+    return "Apenas valores maiores que zero";
+  }
+
+  if (num > 999999.0) {
+    return "Valor não permitido.";
+  }
+
+  return null;
+}
+
 class ProductionForm extends StatefulWidget {
   final Future<void> Function(Production) onCreateProduction;
   final List<Product> products;
@@ -19,33 +36,11 @@ class ProductionForm extends StatefulWidget {
   }
 }
 
-String? numberValidator(String? value, {num? min, num? max}) {
-  if (value == null) {
-    return "Campo obrigatório";
-  }
-
-  final number = num.tryParse(value);
-
-  if (number == null) {
-    return "Apenas valores numéricos";
-  }
-
-  if (min != null && number < min) {
-    return "Deve ser maior ou igual a $min";
-  }
-
-  if (max != null && number > max) {
-    return "Deve ser menor ou igual a $max";
-  }
-
-  return null;
-}
-
 class _ProductionForm extends State<ProductionForm> {
   final GlobalKey<FormState> _formState = GlobalKey<FormState>();
-  final _quantityController = TextEditingController(text: "1");
-  final _productionPriceController = TextEditingController(text: "0.0");
-  final _salePriceController = TextEditingController(text: "0.0");
+  final _quantityController = TextEditingController(text: "");
+  final _productionPriceController = TextEditingController();
+  final _salePriceController = TextEditingController();
   int? _selectedProduct;
   double? expectedRevenue;
   DateTime? _selectedDate;
@@ -65,20 +60,13 @@ class _ProductionForm extends State<ProductionForm> {
 
   void onFormSubmit() async {
     if (_selectedProduct == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Nenhum produto selecionado."),
-        ),
-      );
+      utils.snackBarError(context, message: "Nenhum produto selecionado.");
       return;
     }
-    ;
+
     if (_selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Data de produção não informada."),
-        ),
-      );
+      utils.snackBarError(context,
+          message: "A data de produção não foi informada.");
       return;
     }
 
@@ -108,18 +96,21 @@ class _ProductionForm extends State<ProductionForm> {
   }
 
   void updateExpectedRevenue() {
-    final quantity = double.tryParse(_quantityController.text);
-    final productionPrice = double.tryParse(_productionPriceController.text);
-    final salePrice = double.tryParse(_salePriceController.text);
-    bool isValid =
-        quantity != null && productionPrice != null && salePrice != null;
-    if (isValid) {
-      setState(() {
-        expectedRevenue = (salePrice - productionPrice) * quantity;
-      });
-    } else {
+    double? value;
+    try {
+      int quantity = int.parse(_quantityController.text);
+      double productionPrice = double.parse(_productionPriceController.text);
+      double salePrice = double.parse(_salePriceController.text);
+      if (quantity > 0 && productionPrice > 0.0 && salePrice > 0.0) {
+        value = (salePrice - productionPrice) * quantity;
+      }
+    } catch (e) {
       setState(() {
         expectedRevenue = null;
+      });
+    } finally {
+      setState(() {
+        expectedRevenue = value;
       });
     }
   }
@@ -185,6 +176,7 @@ class _ProductionForm extends State<ProductionForm> {
               Expanded(
                 child: TextFormField(
                   controller: _salePriceController,
+                  keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     label: Text(
                       "Preço de Venda",
@@ -194,13 +186,14 @@ class _ProductionForm extends State<ProductionForm> {
                   onChanged: (value) {
                     updateExpectedRevenue();
                   },
-                  validator: (value) => numberValidator(value, min: 0.0),
+                  validator: realValidator,
                 ),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: TextFormField(
                   controller: _productionPriceController,
+                  keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     label: Text(
                       'Preço de Produção',
@@ -210,7 +203,7 @@ class _ProductionForm extends State<ProductionForm> {
                   onChanged: (value) {
                     updateExpectedRevenue();
                   },
-                  validator: (value) => numberValidator(value, min: 0.0),
+                  validator: realValidator,
                 ),
               ),
             ],
@@ -218,7 +211,7 @@ class _ProductionForm extends State<ProductionForm> {
           const SizedBox(height: 6),
           if (expectedRevenue != null && expectedRevenue != 0)
             Text(
-              "${expectedRevenue! > 0 ? 'Receita' : 'Prejuizo'} esperado: ${expectedRevenue!.abs().toStringAsFixed(2)} R\$",
+              "${expectedRevenue! > 0 ? 'Receita esperada' : 'Prejuizo esperado'} : ${expectedRevenue!.toStringAsFixed(2)} R\$",
               style: TextStyle(
                   color:
                       expectedRevenue! > 0 ? Colors.green : Colors.redAccent),
@@ -230,6 +223,7 @@ class _ProductionForm extends State<ProductionForm> {
               Expanded(
                 child: TextFormField(
                   controller: _quantityController,
+                  keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     label: Text(
                       'Quantidade',
@@ -239,7 +233,22 @@ class _ProductionForm extends State<ProductionForm> {
                   onChanged: (value) {
                     updateExpectedRevenue();
                   },
-                  validator: (value) => numberValidator(value, min: 1),
+                  validator: (value) {
+                    int? quantity = value != null ? int.tryParse(value) : null;
+                    if (quantity == null) {
+                      return "Campo Obrigatório";
+                    }
+
+                    if (quantity < 1) {
+                      return "Apenas valores maiores que zero";
+                    }
+
+                    if (quantity > 2147483647) {
+                      return "Valor não permitido.";
+                    }
+
+                    return null;
+                  },
                 ),
               ),
               const SizedBox(width: 20),
