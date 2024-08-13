@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 final theme = ThemeData(
   useMaterial3: true,
+  scaffoldBackgroundColor: const Color.fromARGB(255, 35, 32, 32),
   colorScheme: ColorScheme.fromSeed(
     seedColor: Colors.purple,
-    background: Colors.black87,
     error: const Color.fromARGB(255, 252, 56, 102),
   ),
   textTheme: const TextTheme().copyWith(
@@ -19,9 +19,10 @@ final theme = ThemeData(
     ),
   ),
   appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.black87,
-      titleTextStyle: TextStyle(
-        color: Colors.white,
-        fontSize: 22,
-      )),
+    backgroundColor: Colors.black87,
+    titleTextStyle: TextStyle(
+      color: Colors.white,
+      fontSize: 22,
+    ),
+  ),
 );
